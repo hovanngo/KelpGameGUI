@@ -4,6 +4,9 @@ import pygame
 import time
 import threading
 import serial
+import keyboard
+
+
 
 class StorylineApp:
     def __init__(self):
@@ -18,6 +21,10 @@ class StorylineApp:
         # Flags
         self.button_mode = True  # True for button, False for RFID
         self.current_step = 0  # Track current step in storyline
+        self.level = 1  # Start at level 1
+        self.rfid_count = 0  # Count of RFIDs scanned in the current level
+        self.rfid_targets = {1: 3, 2: 5, 3: 8}  # Targets for each level
+        self.time_left = 10  # Countdown starting from 60 seconds
 
         # Tkinter setup
         self.root = tk.Tk()
@@ -28,16 +35,57 @@ class StorylineApp:
 
         # Images
         self.villager_photo = ImageTk.PhotoImage(Image.open("images/villager_intro.png").resize((1920, 1080)))
-        self.kelp_prompt = ImageTk.PhotoImage(Image.open("images/kelp_prompt.png").resize((1920, 1080)))
+        self.kelp_prompt = ImageTk.PhotoImage(Image.open("images/kelp_prompt.png").resize((300, 300)))
         self.thank_you = ImageTk.PhotoImage(Image.open("images/villager_thankyou.png").resize((1920, 1080)))
         self.homescreen = ImageTk.PhotoImage(Image.open("images/temphomescreen.png").resize((1920, 1080)))
+        self.timeup = ImageTk.PhotoImage(Image.open("images/timeup.png").resize((800,600)))
+        self.kelp1 = ImageTk.PhotoImage(Image.open("images/temp1.png").resize((1920,1080)))
+        self.kelp2 = ImageTk.PhotoImage(Image.open("images/temp2.png").resize((1920,1080)))
+        self.kelp3 = ImageTk.PhotoImage(Image.open("images/temp3.png").resize((1920,1080)))
+        
 
         # Create a label for images
         self.image_label = tk.Label(self.root)
         self.image_label.pack()
 
+        # Create a label to show countdown
+
+        self.time_label = tk.Label(self.root, text=f"Time Left: {self.time_left}s", font=("Helvetica", 24), bg = "white")
+        self.time_label.place(x=1000, y=100)
+        self.time_label.pack(pady=20)
+
+        
+
+
+        self.root.bind("<space>", self.on_space_press)
+
         # Storyline steps as an array of functions
-        self.storyline_steps = [self.show_homescreen, self.show_intro, self.show_kelp_prompt, self.show_thank_you]
+        self.storyline_steps = [
+            self.show_homescreen,
+            self.show_intro,
+            self.show_kelp_prompt,
+            self.show_kelp1,
+            self.show_kelp2,
+            self.show_kelp3,
+            #show level2 
+            self.show_kelp_prompt,
+            self.show_kelp1,
+            self.show_kelp2,
+            self.show_kelp3,
+            self.show_kelp3,
+            self.show_kelp3,
+            #show level3
+            self.show_kelp_prompt,
+            self.show_kelp1,
+            self.show_kelp2,
+            self.show_kelp3,
+            self.show_kelp3,
+            self.show_kelp3,
+            self.show_kelp3,
+            self.show_kelp3,
+            self.show_kelp3,
+            self.show_thank_you
+        ]
 
         # Start the storyline with the first step
         self.storyline_step()
@@ -46,6 +94,8 @@ class StorylineApp:
         self.serial_thread = threading.Thread(target=self.read_serial)
         self.serial_thread.daemon = True
         self.serial_thread.start()
+
+        # Start the countdown timer
 
         # Run the Tkinter event loop
         self.root.mainloop()
@@ -70,12 +120,22 @@ class StorylineApp:
         self.button_mode = False
         self.image_label.config(image=self.kelp_prompt)
         self.play_sound("sounds/villager_idle3.ogg")
+        self.update_countdown()
+    
 
     def show_thank_you(self):
         """Display the thank you screen."""
         self.button_mode = False
         self.image_label.config(image=self.thank_you)
         self.play_sound("sounds/villager_idle3.ogg")
+
+    def show_timeup(self):
+        """Display the thank you screen."""
+        self.button_mode = False
+        self.image_label.config(image=self.timeup)
+        self.play_sound("sounds/failure.mp3")
+        self.time_label.config(text="Time's up!")
+        print(f"Level {self.level} failed! Time's up!")
 
     def storyline_step(self):
         """Execute the current step in the storyline."""
@@ -98,9 +158,73 @@ class StorylineApp:
                 if self.button_mode and serialdata == "button":  # check button
                     self.button_press()
                 if not self.button_mode and len(serialdata) == 14:  # check RFID
-                    self.storyline_step()
+                    self.rfid_scanned()
+
             time.sleep(0.1)
 
+    def rfid_scanned(self):
+        """Handle RFID scan for the current level."""
+        if self.rfid_count < self.rfid_targets[self.level]:
+            self.rfid_count += 1
+            self.storyline_step()
+            print(f"RFID {self.rfid_count}/{self.rfid_targets[self.level]} scanned")
+            if self.rfid_count == self.rfid_targets[self.level]:
+                self.level_up()
+                
+
+    def level_up(self):
+        """Move to the next level."""
+        if self.level < 3:
+            self.level += 1
+            self.rfid_count = 0  # Reset RFID count for the next level
+            self.time_left = 60  # Reset the timer for the new level
+            print(f"Level {self.level} reached. Scanning {self.rfid_targets[self.level]} RFIDs.")
+            self.root.after(3000, self.storyline_step)
+        else:
+            print("All levels completed.")
+            self.show_thank_you()  # Show the final thank you screen
+
+    def update_countdown(self):
+        """Update the countdown timer."""
+        if self.time_left > 0:
+            self.time_left -= 1
+            self.time_label.config(text=f"Time Left: {self.time_left}s")
+            self.root.after(1000, self.update_countdown)
+        else:
+            self.check_level_status()
+
+    def check_level_status(self):
+        """Check if the current level is complete."""
+        if self.rfid_count < self.rfid_targets[self.level]:
+            self.show_timeup()  # Show thank you screen if time runs out before completing the task
+        else:
+            print(f"Level {self.level} complete!")
+            self.level_up()
+    
+    def show_kelp1(self):
+        """Display the thank you screen."""
+        self.button_mode = False
+        self.image_label.config(image=self.kelp1)
+        self.play_sound("sounds/villager_idle3.ogg")
+
+    def show_kelp2(self):
+        """Display the thank you screen."""
+        self.button_mode = False
+        self.image_label.config(image=self.kelp2)
+        self.play_sound("sounds/villager_idle3.ogg")
+
+    def show_kelp3(self):
+        """Display the thank you screen."""
+        self.button_mode = False
+        self.image_label.config(image=self.kelp3)
+        self.play_sound("sounds/villager_idle3.ogg")
+
+    def on_space_press(self,event):
+            print("manual skip")
+            self.storyline_step()
+
+
+    
 # Start the application
 if __name__ == "__main__":
     StorylineApp()
