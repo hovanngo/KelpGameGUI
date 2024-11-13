@@ -5,7 +5,7 @@
 #define SS_PIN 10          // SDA pin for RFID
 #define RST_PIN 9          // RST pin for RFID
 #define BUTTON_PIN 7       // Pin for the button
-#define SERVO1_PIN 6       // Signal pin for first Servo
+#define SERVO1_PIN 2       // Signal pin for first Servo
 #define SERVO2_PIN 5       // Signal pin for second Servo
 
 MFRC522 rfid(SS_PIN, RST_PIN);   // Create MFRC522 instance
@@ -27,6 +27,8 @@ void setup()
   servo2.write(90);
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
+  servo1.write(90);             
+  servo2.write(90);
 }
 
 void loop() {

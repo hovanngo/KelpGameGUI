@@ -21,7 +21,8 @@ class StorylineApp:
         self.level = 1  # Start at level 1
         self.rfid_count = 0  # Count of RFIDs scanned in the current level
         self.rfid_targets = {1: 3, 2: 5, 3: 8}  # Targets for each level
-        self.time_left = 30  # Countdown starting from 10 seconds
+        self.time_left = 60  # Initialize timer
+        self.timer_status = False
 
         # Tkinter setup
         self.root = tk.Tk()
@@ -35,26 +36,30 @@ class StorylineApp:
         self.canvas.pack()
 
         # Load images
-        self.villager_photo = ImageTk.PhotoImage(Image.open("images/villager_intro.png").resize((1600, 900)))
-        self.kelp_prompt = ImageTk.PhotoImage(Image.open("images/kelp_prompt.png").resize((1600, 900)))
-        self.thank_you = ImageTk.PhotoImage(Image.open("images/villager_thankyou.png").resize((1600, 900)))
-        self.homescreen = ImageTk.PhotoImage(Image.open("images/welcome_screen.gif").resize((1600, 900)))
-        self.timeup = ImageTk.PhotoImage(Image.open("images/time_up.jpg").resize((1600,900)))
-        self.kelp1 = ImageTk.PhotoImage(Image.open("images/kelp_1.jpg").resize((1600,900)))
-        self.kelp2 = ImageTk.PhotoImage(Image.open("images/kelp_2.jpg").resize((1600,900)))
-        self.kelp3 = ImageTk.PhotoImage(Image.open("images/kelp_3.jpg").resize((1600,900)))
-        self.kelp4 = ImageTk.PhotoImage(Image.open("images/kelp_4.jpg").resize((1600,900)))
-        self.kelp5 = ImageTk.PhotoImage(Image.open("images/kelp_5.jpg").resize((1600,900)))
-        self.kelp6 = ImageTk.PhotoImage(Image.open("images/kelp_6.jpg").resize((1600,900)))
-        self.kelp7 = ImageTk.PhotoImage(Image.open("images/kelp_7.jpg").resize((1600,900)))
-        self.kelp8 = ImageTk.PhotoImage(Image.open("images/kelp_8.jpg").resize((1600,900)))
-        self.level1 = ImageTk.PhotoImage(Image.open("images/level_1.jpg").resize((1600, 900)))
-        self.level2 = ImageTk.PhotoImage(Image.open("images/level_2.jpg").resize((1600, 900)))
+        self.villager_photo = ImageTk.PhotoImage(Image.open("images/villager_intro.png").resize((1920, 1080)))
+        self.kelp_prompt = ImageTk.PhotoImage(Image.open("images/kelp_prompt.png").resize((1920, 1080)))
+        self.thank_you = ImageTk.PhotoImage(Image.open("images/villager_thankyou.png").resize((1920, 1080)))
+        self.homescreen = ImageTk.PhotoImage(Image.open("images/welcome_screen.gif").resize((1920, 1080)))
+        self.timeup = ImageTk.PhotoImage(Image.open("images/time_up.jpg").resize((1920,1080)))
+        self.kelp1 = ImageTk.PhotoImage(Image.open("images/kelp_1.jpg").resize((1920,1080)))
+        self.kelp2 = ImageTk.PhotoImage(Image.open("images/kelp_2.jpg").resize((1920,1080)))
+        self.kelp3 = ImageTk.PhotoImage(Image.open("images/kelp_3.jpg").resize((1920,1080)))
+        self.kelp4 = ImageTk.PhotoImage(Image.open("images/kelp_4.jpg").resize((1920,1080)))
+        self.kelp5 = ImageTk.PhotoImage(Image.open("images/kelp_5.jpg").resize((1920,1080)))
+        self.kelp6 = ImageTk.PhotoImage(Image.open("images/kelp_6.jpg").resize((1920,1080)))
+        self.kelp7 = ImageTk.PhotoImage(Image.open("images/kelp_7.jpg").resize((1920,1080)))
+        self.kelp8 = ImageTk.PhotoImage(Image.open("images/kelp_8.jpg").resize((1920,1080)))
+        self.level1 = ImageTk.PhotoImage(Image.open("images/level_1.jpg").resize((1920, 1080)))
+        self.level2 = ImageTk.PhotoImage(Image.open("images/level_2.jpg").resize((1920, 1080)))
 
-        #why the fuck is it 16:9. I cant figure out why it doesnt work with 1920x1080
+        #change display of computer to fit 1920x1080 -> display scale to 100%
 
         # Create labels on canvas for images and timer text
         self.image_on_canvas = self.canvas.create_image(0, 0, anchor="nw", image=self.homescreen)
+        self.homescreen_frames = self.load_gif_frames("images/welcome_screen.gif")
+        self.current_frame_index = 0  # Start from the first frame
+        
+        self.image_on_canvas = self.canvas.create_image(0, 0, anchor="nw")
         
 
         # Bind space key to manual skip
@@ -99,6 +104,20 @@ class StorylineApp:
         # Run the Tkinter event loop
         self.root.mainloop()
 
+    def load_gif_frames(self, gif_path):
+        """Load frames from a GIF file."""
+        gif_image = Image.open(gif_path)
+        frames = []
+        try:
+            while True:
+                frame = gif_image.copy().resize((1920, 1080))
+                frames.append(ImageTk.PhotoImage(frame))
+                gif_image.seek(len(frames))  # Move to the next frame
+        except EOFError:
+            pass  # End of frames
+        return frames
+
+
     def play_sound(self, file_path):
         """Play sound using pygame."""
         pygame.mixer.music.load(file_path)
@@ -106,8 +125,18 @@ class StorylineApp:
 
     def show_homescreen(self):
         """Display the homescreen."""
+        frame = self.homescreen_frames[self.current_frame_index]
+        self.canvas.itemconfig(self.image_on_canvas, image=frame)
         self.button_mode = True
-        self.canvas.itemconfig(self.image_on_canvas, image=self.homescreen)
+        
+        # Move to the next frame or loop back to the start
+        if self.current_step <= 1:
+            self.current_frame_index = (self.current_frame_index + 1) % len(self.homescreen_frames)
+            self.root.after(50, self.show_homescreen)
+        else:
+            self.show_intro()
+
+
 
     def show_intro(self):
         """Display the introduction screen."""
@@ -115,12 +144,15 @@ class StorylineApp:
         self.play_sound("sounds/Villager_idle1.ogg")
 
     def show_kelp_prompt(self):
+        self.resume_timer()
+        self.time_left = 60 #time reset to 60 after each level 
+        if self.current_step == 2:
+            self.time_text = self.canvas.create_text(800, 800, text=f"Time Left: {self.time_left}s", font=("Helvetica", 24), fill="black")
         """Display the kelp prompt."""
         self.button_mode = False
         self.canvas.itemconfig(self.image_on_canvas, image=self.kelp_prompt)
-        self.time_text = self.canvas.create_text(800, 800, text=f"Time Left: {self.time_left}s", font=("Helvetica", 24), fill="black")
         self.play_sound("sounds/villager_idle3.ogg")
-        self.update_countdown()
+        self.timer()
     
     def show_thank_you(self):
         """Display the thank you screen."""
@@ -141,6 +173,7 @@ class StorylineApp:
         if self.current_step < len(self.storyline_steps):
             self.storyline_steps[self.current_step]()  # Call the function for the current step
             self.current_step += 1  # Move to the next step
+            #print(self.current_step)
         else:
             print("Storyline has ended.")
 
@@ -175,21 +208,32 @@ class StorylineApp:
         if self.level < 3:
             self.level += 1
             self.rfid_count = 0  # Reset RFID count for the next level
-            self.time_left = 60  # Reset the timer for the new level
+            self.pause_timer()
             print(f"Level {self.level} reached. Scanning {self.rfid_targets[self.level]} RFIDs.")
             self.root.after(3000, self.storyline_step)
         else:
             print("All levels completed.")
             self.show_thank_you()  # Show the final thank you screen
 
-    def update_countdown(self):
-        """Update the countdown timer on the canvas."""
-        if self.time_left > 0:
-            self.time_left -= 1
-            self.canvas.itemconfig(self.time_text, text=f"Time Left: {self.time_left}s")
-            self.root.after(1000, self.update_countdown)
+    def timer(self):
+        if self.timer_status == True:
+            print(self.time_left)
+            """Update the countdown timer on the canvas."""
+            if self.time_left > 0:
+                self.time_left -= 1
+                self.canvas.itemconfig(self.time_text, text=f"Time Left: {self.time_left}s")
+                self.root.after(1000, self.timer)
+            else:
+                self.check_level_status()
         else:
-            self.check_level_status()
+            print("timer not enabled")
+    
+    def pause_timer(self):
+        self.timer_status = False 
+
+    def resume_timer(self):
+        self.timer_status = True
+
 
     def check_level_status(self):
         """Check if the current level is complete."""
