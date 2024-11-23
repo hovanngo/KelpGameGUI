@@ -1,1 +1,0 @@
-self.canvas.after(3000, self.show_button)

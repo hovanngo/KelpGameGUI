@@ -22,6 +22,7 @@ class StorylineApp:
         self.rfid_targets = {1: 3, 2: 5}  # Targets for each level
         self.time_left = 0  # Initialize timer
         self.timer_status = False # True if running, false is paused 
+        self.retry_status = False
 
         # Tkinter setup
         self.root = tk.Tk()
@@ -124,12 +125,11 @@ class StorylineApp:
             self.show_kelp5,
             self.show_fact8,
             self.show_thankyou2
-            #maybe end screen?
         ]
 
         #Storyline setup. Start the storyline with the first step.
         self.storyline_step()
-        self.play_sound("sounds/Subwoofer_lullaby.mp3")
+        self.play_sound("sounds/backgroundmusic2.mp3")
 
         # Start the serial reading thread
         self.serial_thread = threading.Thread(target=self.read_serial)
@@ -194,7 +194,7 @@ class StorylineApp:
                 serialdata = self.ser.readline().decode().strip()
                 print("Serial data: ", serialdata)
                 if self.button_mode and serialdata == "Button":  # check button
-                    if self.current_step == 35:
+                    if self.retry_status: #If reaches retry screen
                         self.canvas.delete(self.time_text)
                         self.retry()
                     else:
@@ -212,6 +212,7 @@ class StorylineApp:
             self.storyline_step()
             print(f"RFID {self.rfid_count}/{self.rfid_targets[self.level]} scanned")
             if self.rfid_count == self.rfid_targets[self.level]:
+                print(f"Level {self.level} complete!")
                 self.level_up()
 
     def timer(self):
@@ -223,7 +224,7 @@ class StorylineApp:
                 self.canvas.itemconfig(self.time_text, text=f"Time Left: {self.time_left}s")
                 self.root.after(1000, self.timer)
             else:
-                self.check_level_status()
+                self.check_fail()
         else:
             print("timer not enabled")
     
@@ -233,15 +234,12 @@ class StorylineApp:
     def resume_timer(self):
         self.timer_status = True
 
-    def check_level_status(self):
+    def check_fail(self):
         """Check if the current level is complete."""
-        if self.rfid_count < self.rfid_targets[self.level]:
-            if self.level == 1:
-                self.show_level1fail() 
-            elif self.level == 2:
-                self.show_level2fail()
-        else:
-            print(f"Level {self.level} complete!")
+        if self.rfid_count < self.rfid_targets[1]:
+            self.show_level1fail() 
+        elif self.rfid_count < self.rfid_targets[2]:
+            self.show_level2fail()
 
     def level_up(self):
         """Move to the next level."""
@@ -258,6 +256,7 @@ class StorylineApp:
         """Manual skip to the next storyline step."""
         print("Manual skip")
         self.storyline_step()
+        
 
 
 
@@ -331,13 +330,13 @@ class StorylineApp:
         self.canvas.itemconfig(self.image_on_canvas, image=self.failscreen1)
         self.play_sound("sounds/Villager_idle1.ogg")
         self.button_mode = False
-        self.root.after(3000, self.retry)
+        self.root.after(3000, self.show_retry)
 
     def show_failscreen2(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.failscreen2)
         self.play_sound("sounds/Villager_idle1.ogg")
         self.button_mode = False
-        self.root.after(3000, self.retry)
+        self.root.after(3000, self.show_retry)
 
     def show_story1(self):
         """Display the introduction screen."""
@@ -408,7 +407,7 @@ class StorylineApp:
     def show_instruct2(self):
         """Display the introduction screen."""
         self.resume_timer()
-        self.time_left = 60 #time set to 60
+        self.time_left = 10 #time set to 60
         self.time_text = self.canvas.create_text(960, 960, text=f"Time Left: {self.time_left}s", font=("Comic Sans", 50), fill="magenta")
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct2)
         self.play_sound("sounds/Villager_trade3.ogg")
@@ -424,7 +423,7 @@ class StorylineApp:
     def show_instruct4(self):
         """Display the introduction screen."""
         self.resume_timer()
-        self.time_left = 90 #time set to 90
+        self.time_left = 10 #time set to 90
         self.time_text = self.canvas.create_text(960, 960, text=f"Time Left: {self.time_left}s", font=("Comic Sans", 50), fill="magenta")
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct4)
         self.play_sound("sounds/Villager_trade3.ogg")
@@ -445,8 +444,7 @@ class StorylineApp:
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact3)
         self.play_sound("sounds/Villager_accept3.ogg")
         self.button_mode = False
-        if self.current_step < 20:
-            self.canvas.after(2000, self.show_button)
+        self.canvas.after(2000, self.show_button) #Level 1 Last fact shown 
 
     def show_fact4(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact4)
@@ -461,23 +459,24 @@ class StorylineApp:
     def show_fact6(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact6)
         self.play_sound("sounds/Villager_accept3.ogg")
-        self.button_mode = False #Last fact shown, so button mode true 
+        self.button_mode = False 
 
     def show_fact7(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact7)
         self.play_sound("sounds/Villager_accept3.ogg")
-        self.button_mode = False #Last fact shown, so button mode true 
+        self.button_mode = False 
 
     def show_fact8(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact8)
         self.play_sound("sounds/Villager_accept3.ogg")
-        self.button_mode = True #Last fact shown, so button mode true 
-        self.canvas.after(2000, self.show_button)
+        self.button_mode = True
+        self.canvas.after(2000, self.show_button) #Level 2 last fact shown
     
     def show_retry(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.retryscreen)
         self.play_sound("sounds/Villager_idle1.ogg")
         self.button_mode = True
+        self.retry_status = True
 
     def show_thankyou1(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.thankyou1)
@@ -501,13 +500,13 @@ class StorylineApp:
         self.button_mode = True
 
     def retry(self):
+        self.retry_status = False #turn retry status back off once retried 
         self.button_mode = True  # True for button, False for RFID
         self.current_step = 0  # Track current step in storyline
-        self.level = 1  # Start at level 0
+        self.level = 1  # Start at level 1
         self.rfid_count = 0  # Count of RFIDs scanned in the current level
-        self.rfid_targets = {1: 3, 2: 5}  # Targets for each level
         self.time_left = 0  # Initialize timer
-        self.timer_status = False # True if running, false is paused
+        self.pause_timer()
         self.storyline_step()
         self.play_sound("sounds/Subwoofer_lullaby.mp3")
 
