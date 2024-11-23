@@ -1,2 +1,1 @@
-
-        self.storyline_step()
+self.canvas.after(3000, self.show_button)

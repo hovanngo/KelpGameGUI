@@ -15,14 +15,13 @@ class StorylineApp:
         self.baud_rate = 9600
         self.ser = serial.Serial(self.arduino_port, self.baud_rate)
 
-        # Flags
         self.button_mode = True  # True for button, False for RFID
         self.current_step = 0  # Track current step in storyline
-        self.level = 1  # Start at level 1
+        self.level = 0  # Start at level 0
         self.rfid_count = 0  # Count of RFIDs scanned in the current level
-        self.rfid_targets = {1: 3, 2: 5, 3: 8}  # Targets for each level
-        self.time_left = 60  # Initialize timer
-        self.timer_status = False
+        self.rfid_targets = {1: 3, 2: 5}  # Targets for each level
+        self.time_left = 0  # Initialize timer
+        self.timer_status = False # True if running, false is paused 
 
         # Tkinter setup
         self.root = tk.Tk()
@@ -36,7 +35,7 @@ class StorylineApp:
         self.canvas.pack()
 
         # Load images
-        self.homescreen = ImageTk.PhotoImage(Image.open("images/welcome_screen2.gif").resize((1920, 1080)))
+        self.homescreen = ImageTk.PhotoImage(Image.open("images/welcomescreen.gif"))
         self.story1 = ImageTk.PhotoImage(Image.open("images/2.jpg").resize((1920, 1080)))
         self.story2 = ImageTk.PhotoImage(Image.open("images/3.jpg").resize((1920, 1080)))
         self.story3 = ImageTk.PhotoImage(Image.open("images/4.jpg").resize((1920, 1080)))
@@ -55,7 +54,7 @@ class StorylineApp:
         self.thankyou1 = ImageTk.PhotoImage(Image.open("images/17.jpg").resize((1920, 1080)))
         self.level1fail = ImageTk.PhotoImage(Image.open("images/18.jpg").resize((1920, 1080)))
         self.failscreen1 = ImageTk.PhotoImage(Image.open("images/19.jpg").resize((1920, 1080)))
-        self.retry = ImageTk.PhotoImage(Image.open("images/20.jpg").resize((1920, 1080)))
+        self.retryscreen = ImageTk.PhotoImage(Image.open("images/20.jpg").resize((1920, 1080)))
         self.story7 = ImageTk.PhotoImage(Image.open("images/21.jpg").resize((1920, 1080)))
         self.story8 = ImageTk.PhotoImage(Image.open("images/22.jpg").resize((1920, 1080)))
         self.story9 = ImageTk.PhotoImage(Image.open("images/23.jpg").resize((1920, 1080)))
@@ -68,22 +67,22 @@ class StorylineApp:
         self.kelp4 = ImageTk.PhotoImage(Image.open("images/33.jpg").resize((1920, 1080)))
         self.kelp5 = ImageTk.PhotoImage(Image.open("images/34.jpg").resize((1920, 1080)))
         self.fact6 = ImageTk.PhotoImage(Image.open("images/35.jpg").resize((1920, 1080)))
-        self.thankyou2 = ImageTk.PhotoImage(Image.open("images/36.jpg").resize((1920, 1080)))
+        self.thankyou2 = ImageTk.PhotoImage(Image.open("images/39.jpg").resize((1920, 1080)))
         self.level2fail = ImageTk.PhotoImage(Image.open("images/37.jpg").resize((1920, 1080)))
         self.failscreen2 = ImageTk.PhotoImage(Image.open("images/38.jpg").resize((1920, 1080)))
         self.thankyou3 = ImageTk.PhotoImage(Image.open("images/39.jpg").resize((1920, 1080)))
+        self.button_screen = ImageTk.PhotoImage(Image.open("images/40.jpg").resize((1920, 1080)))
+        self.fact7 = ImageTk.PhotoImage(Image.open("images/41.jpg").resize((1920, 1080)))
+        self.fact8 = ImageTk.PhotoImage(Image.open("images/42.jpg").resize((1920, 1080)))
         self.kelp6 = ImageTk.PhotoImage(Image.open("images/44.jpg").resize((1920, 1080)))
-        self.kelp7 = ImageTk.PhotoImage(Image.open("images/45.jpg").resize((1920, 1080)))
-        self.kelp8 = ImageTk.PhotoImage(Image.open("images/46.jpg").resize((1920, 1080)))
+
         #change display of computer to fit 1920x1080 -> display scale to 100%
 
         # Create labels on canvas for images and timer text
         self.image_on_canvas = self.canvas.create_image(0, 0, anchor="nw", image=self.homescreen)
-        self.homescreen_frames = self.load_gif_frames("images/welcome_screen2.gif")
+        self.homescreen_frames = self.load_gif_frames("images/welcomescreen.gif")
         self.current_frame_index = 0  # Start from the first frame
-        
         self.image_on_canvas = self.canvas.create_image(0, 0, anchor="nw")
-        
 
         # Bind space key to manual skip
         self.root.bind("<space>", self.on_space_press)
@@ -119,13 +118,14 @@ class StorylineApp:
             self.show_kelp2,
             self.show_fact5,
             self.show_kelp3,
-            self.show_kelp4,
             self.show_fact6,
+            self.show_kelp4,
+            self.show_fact7,
             self.show_kelp5,
+            self.show_fact8,
             self.show_thankyou2
             #maybe end screen?
         ]
-
 
         #Storyline setup. Start the storyline with the first step.
         self.storyline_step()
@@ -139,6 +139,9 @@ class StorylineApp:
         # Run the Tkinter event loop
         self.root.mainloop()
 
+####################################
+# Game functions  
+
     def load_gif_frames(self, gif_path):
         """Load frames from a GIF file."""
         gif_image = Image.open(gif_path)
@@ -151,7 +154,6 @@ class StorylineApp:
         except EOFError:
             pass  # End of frames
         return frames
-
 
     def play_sound(self, file_path):
         """Play sound using pygame."""
@@ -192,7 +194,11 @@ class StorylineApp:
                 serialdata = self.ser.readline().decode().strip()
                 print("Serial data: ", serialdata)
                 if self.button_mode and serialdata == "Button":  # check button
-                    self.button_press()
+                    if self.current_step == 35:
+                        self.canvas.delete(self.time_text)
+                        self.retry()
+                    else:
+                        self.button_press()
                 if not self.button_mode and len(serialdata) == 5:  # check RFID
                     self.rfid_scanned()
 
@@ -231,11 +237,10 @@ class StorylineApp:
         if self.rfid_count < self.rfid_targets[self.level]:
             if self.level == 1:
                 self.show_level1fail() 
-            if self.level == 2:
+            elif self.level == 2:
                 self.show_level2fail()
         else:
             print(f"Level {self.level} complete!")
-            self.level_up()
 
     def level_up(self):
         """Move to the next level."""
@@ -244,7 +249,6 @@ class StorylineApp:
             self.rfid_count = 0  # Reset RFID count for the next level
             self.pause_timer()
             print(f"Level {self.level} reached. Scanning {self.rfid_targets[self.level]} RFIDs.")
-            self.root.after(3000, self.storyline_step)
         else:
             print("All levels completed.")
             #self.thankyou3()  # Show the final thank you screen
@@ -256,88 +260,83 @@ class StorylineApp:
 
 
 
-
+#################################################
+# Storyline functions 
 
     def show_kelp1(self):
         """Display kelp image 1."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.kelp1)
         self.play_sound("sounds/villager_idle3.ogg")
         self.button_mode = False
-        
+        self.root.after(1500, self.storyline_step)
+            
 
     def show_kelp2(self):
         """Display kelp image 2."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.kelp2)
-        self.play_sound("sounds/villager_idle3.ogg")
+        self.play_sound("sounds/villager_idle2.ogg")
         self.button_mode = False
+        print(self.level)
+        self.root.after(1500, self.storyline_step)
 
     def show_kelp3(self):
         """Display kelp image 3."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.kelp3)
-        self.play_sound("sounds/villager_idle3.ogg")
+        self.play_sound("sounds/villager_idle1.ogg")
         self.button_mode = False
+        self.root.after(1500, self.storyline_step)
 
     def show_kelp4(self):
         """Display kelp image 3."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.kelp4)
         self.play_sound("sounds/villager_idle3.ogg")
         self.button_mode = False
+        self.root.after(1500, self.storyline_step)
 
     def show_kelp5(self):
         """Display kelp image 3."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.kelp5)
-        self.play_sound("sounds/villager_idle3.ogg")
+        self.play_sound("sounds/villager_idle2.ogg")
         self.button_mode = False
-
-    def show_kelp6(self):
-        """Display kelp image 3."""
-        self.canvas.itemconfig(self.image_on_canvas, image=self.kelp6)
-        self.play_sound("sounds/villager_idle3.ogg")
-        self.button_mode = False
-
-    def show_kelp7(self):
-        """Display kelp image 3."""
-        self.canvas.itemconfig(self.image_on_canvas, image=self.kelp7)
-        self.play_sound("sounds/villager_idle3.ogg")
-        self.button_mode = False
-
-    def show_kelp8(self):
-        """Display kelp image 3."""
-        self.canvas.itemconfig(self.image_on_canvas, image=self.kelp8)
-        self.play_sound("sounds/villager_idle3.ogg")
-        self.button_mode = False
+        self.root.after(1500, self.storyline_step)
 
     def show_level1(self):
         """Display kelp image 3."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.level1)
-        self.play_sound("sounds/villager_idle3.ogg")
+        self.play_sound("sounds/villager_idle1.ogg")
         self.button_mode = True
 
     def show_level2(self):
         """Display kelp image 3."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.level2)
-        self.play_sound("sounds/villager_idle3.ogg")
+        self.play_sound("sounds/villager_idle2.ogg")
         self.button_mode = True
 
     def show_level1fail(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.level1fail)
-        self.play_sound("sounds/villager_idle3.ogg")
+        self.play_sound("sounds/Zombie_villager_idle2.ogg")
         self.button_mode = True
+        self.root.after(3000, self.show_failscreen1) 
+        self.canvas.delete(self.time_text)
 
     def show_level2fail(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.level2fail)
-        self.play_sound("sounds/villager_idle3.ogg")
+        self.play_sound("sounds/Zombie_villager_idle2.ogg")
         self.button_mode = True
+        self.root.after(3000, self.show_failscreen2)
+        self.canvas.delete(self.time_text)
 
     def show_failscreen1(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.failscreen1)
         self.play_sound("sounds/Villager_idle1.ogg")
-        self.button_mode = True
+        self.button_mode = False
+        self.root.after(3000, self.retry)
 
     def show_failscreen2(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.failscreen2)
         self.play_sound("sounds/Villager_idle1.ogg")
-        self.button_mode = True
+        self.button_mode = False
+        self.root.after(3000, self.retry)
 
     def show_story1(self):
         """Display the introduction screen."""
@@ -348,13 +347,13 @@ class StorylineApp:
     def show_story2(self):
         """Display the introduction screen."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.story2)
-        self.play_sound("sounds/Villager_idle1.ogg")
+        self.play_sound("sounds/Villager_idle2.ogg")
         self.button_mode = True
 
     def show_story3(self):
         """Display the introduction screen."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.story3)
-        self.play_sound("sounds/Villager_idle1.ogg")
+        self.play_sound("sounds/Villager_idle3.ogg")
         self.button_mode = True
 
     def show_story4(self):
@@ -366,13 +365,13 @@ class StorylineApp:
     def show_story5(self):
         """Display the introduction screen."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.story5)
-        self.play_sound("sounds/Villager_idle1.ogg")
+        self.play_sound("sounds/Villager_idle2.ogg")
         self.button_mode = True
 
     def show_story6(self):
         """Display the introduction screen."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.story6)
-        self.play_sound("sounds/Villager_idle1.ogg")
+        self.play_sound("sounds/Villager_idle3.ogg")
         self.button_mode = True
 
     def show_story7(self):
@@ -384,13 +383,13 @@ class StorylineApp:
     def show_story8(self):
         """Display the introduction screen."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.story8)
-        self.play_sound("sounds/Villager_idle1.ogg")
+        self.play_sound("sounds/Villager_idle2.ogg")
         self.button_mode = True
 
     def show_story9(self):
         """Display the introduction screen."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.story9)
-        self.play_sound("sounds/Villager_idle1.ogg")
+        self.play_sound("sounds/Villager_idle3.ogg")
         self.button_mode = True
 
     def show_story10(self):
@@ -402,75 +401,114 @@ class StorylineApp:
     def show_instruct1(self):
         """Display the introduction screen."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct1)
-        self.play_sound("sounds/Villager_idle1.ogg")
+        self.play_sound("sounds/Villager_trade3.ogg")
         self.button_mode = True
 
     def show_instruct2(self):
         """Display the introduction screen."""
         self.resume_timer()
-        self.time_left = 60 #time reset to 60 after each level 
+        self.time_left = 60 #time set to 60
         self.time_text = self.canvas.create_text(960, 960, text=f"Time Left: {self.time_left}s", font=("Comic Sans", 50), fill="magenta")
-        """Display the kelp prompt."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct2)
-        self.play_sound("sounds/Villager_idle1.ogg")
-        self.button_mode = True
-        self.timer()
+        self.play_sound("sounds/Villager_trade3.ogg")
+        self.button_mode = False
+        self.timer() #initialize timer 
     
     def show_instruct3(self):
         """Display the introduction screen."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct3)
-        self.play_sound("sounds/Villager_idle1.ogg")
+        self.play_sound("sounds/Villager_trade3.ogg")
         self.button_mode = True
 
     def show_instruct4(self):
         """Display the introduction screen."""
         self.resume_timer()
+        self.time_left = 90 #time set to 90
+        self.time_text = self.canvas.create_text(960, 960, text=f"Time Left: {self.time_left}s", font=("Comic Sans", 50), fill="magenta")
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct4)
-        self.play_sound("sounds/Villager_idle1.ogg")
-        self.button_mode = True
+        self.play_sound("sounds/Villager_trade3.ogg")
+        self.button_mode = False
+        self.timer() #initialize timer 
 
     def show_fact1(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact1)
-        self.play_sound("sounds/Villager_idle1.ogg")
-        self.button_mode = True
+        self.play_sound("sounds/Villager_accept3.ogg")
+        self.button_mode = False
 
     def show_fact2(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact2)
-        self.play_sound("sounds/Villager_idle1.ogg")
-        self.button_mode = True
+        self.play_sound("sounds/Villager_accept3.ogg")
+        self.button_mode = False
 
     def show_fact3(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact3)
-        self.play_sound("sounds/Villager_idle1.ogg")
-        self.button_mode = True
+        self.play_sound("sounds/Villager_accept3.ogg")
+        self.button_mode = False
+        if self.level == 1:
+            self.canvas.after(3000, self.show_button)
 
     def show_fact4(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact4)
-        self.play_sound("sounds/Villager_idle1.ogg")
-        self.button_mode = True
+        self.play_sound("sounds/Villager_accept3.ogg")
+        self.button_mode = False
 
     def show_fact5(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact5)
-        self.play_sound("sounds/Villager_idle1.ogg")
-        self.button_mode = True
+        self.play_sound("sounds/Villager_accept3.ogg")
+        self.button_mode = False
 
     def show_fact6(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact6)
+        self.play_sound("sounds/Villager_accept3.ogg")
+        self.button_mode = False #Last fact shown, so button mode true 
+
+    def show_fact7(self):
+        self.canvas.itemconfig(self.image_on_canvas, image=self.fact7)
+        self.play_sound("sounds/Villager_accept3.ogg")
+        self.button_mode = False #Last fact shown, so button mode true 
+
+    def show_fact8(self):
+        self.canvas.itemconfig(self.image_on_canvas, image=self.fact8)
+        self.play_sound("sounds/Villager_accept3.ogg")
+        self.button_mode = True #Last fact shown, so button mode true 
+        self.canvas.after(3000, self.show_button)
+    
+    def show_retry(self):
+        self.canvas.itemconfig(self.image_on_canvas, image=self.retryscreen)
         self.play_sound("sounds/Villager_idle1.ogg")
         self.button_mode = True
 
     def show_thankyou1(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.thankyou1)
-        self.play_sound("sounds/Villager_idle1.ogg")
+        self.play_sound("sounds/Villager_accept2.ogg")
         self.button_mode = True
         self.pause_timer()
+        self.canvas.delete(self.time_text)
 
     def show_thankyou2(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.thankyou2)
-        self.play_sound("sounds/Villager_idle1.ogg")
+        self.play_sound("sounds/Villager_accept2.ogg")
         self.button_mode = True
         self.pause_timer()
+        self.canvas.delete(self.time_text)
+        self.root.after(5000, self.show_retry)
+        print(self.current_step) 
 
+    def show_button(self):
+        self.canvas.itemconfig(self.image_on_canvas, image=self.button_screen)
+        self.play_sound("sounds/Villager_idle1.ogg")
+        self.button_mode = True
+
+    def retry(self):
+        self.button_mode = True  # True for button, False for RFID
+        self.current_step = 0  # Track current step in storyline
+        self.level = 0  # Start at level 0
+        self.rfid_count = 0  # Count of RFIDs scanned in the current level
+        self.rfid_targets = {1: 3, 2: 5}  # Targets for each level
+        self.time_left = 0  # Initialize timer
+        self.timer_status = False # True if running, false is paused
+        self.storyline_step()
+        self.play_sound("sounds/Subwoofer_lullaby.mp3")
 
 
 # Start the application
