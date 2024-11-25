@@ -418,7 +418,7 @@ class StorylineApp:
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct2)
         self.play_sound("sounds/Villager_trade3.ogg")
         self.button_mode = False
-        self.send_command("OFF")
+##        self.send_command("OFF")
         self.timer() #initialize timer 
     
     def show_instruct3(self):
@@ -435,7 +435,7 @@ class StorylineApp:
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct4)
         self.play_sound("sounds/Villager_trade3.ogg")
         self.button_mode = False
-        self.send_command("OFF")
+      ##  self.send_command("OFF")
         self.timer() #initialize timer 
 
     def show_fact1(self):
@@ -453,7 +453,6 @@ class StorylineApp:
         self.play_sound("sounds/Villager_accept3.ogg")
         self.button_mode = False
         self.canvas.after(2000, self.show_button) #Level 1 Last fact shown 
-
 
     def show_fact4(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact4)
