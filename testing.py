@@ -102,7 +102,7 @@ class StorylineApp:
             self.show_story6,
             self.show_level1,
             self.show_instruct1,
-            self.show_instruct2,
+            #self.show_instruct2,
             self.show_kelp1,
             self.show_fact1,
             self.show_kelp2,
@@ -213,7 +213,7 @@ class StorylineApp:
                         self.retry()
                     else:
                         self.button_press()
-                if not self.button_mode and len(serialdata) == 5:  # check RFID
+                if not self.button_mode and len(serialdata) == 5:  # check RFIDgit 
                     self.rfid_scanned()
 
             time.sleep(0.1)
@@ -323,7 +323,7 @@ class StorylineApp:
         """Display kelp image 3."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.level1)
         self.play_sound("sounds/villager_idle1.ogg")
-        self.button_mode = True
+        self.button_mode = False
         self.root.after(2000, self.storyline_step)
         self.send_command("OFF")
 
@@ -331,20 +331,20 @@ class StorylineApp:
         """Display kelp image 3."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.level2)
         self.play_sound("sounds/villager_idle2.ogg")
-        self.button_mode = True
+        self.button_mode = False
         self.root.after(3000, self.storyline_step)
 
     def show_level1fail(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.level1fail)
-        self.play_sound("sounds/Zombie_villager_idle2.ogg")
+        self.play_sound1("sounds/Zombie_villager_idle2.ogg")
         self.button_mode = True
         self.root.after(3000, self.show_failscreen1) 
         self.canvas.delete(self.time_text)
 
     def show_level2fail(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.level2fail)
-        self.play_sound("sounds/Zombie_villager_idle2.ogg")
-        self.button_mode = True
+        self.play_sound1("sounds/Zombie_villager_idle2.ogg")
+        self.button_mode = False
         self.root.after(3000, self.show_failscreen2)
         self.canvas.delete(self.time_text)
 
@@ -425,8 +425,9 @@ class StorylineApp:
         """Display the introduction screen."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct1)
         self.play_sound("sounds/Villager_trade3.ogg")
-        self.button_mode = True
-        self.send_command("ON")
+        self.button_mode = False
+        self.send_command("OFF")
+        self.root.after(3000, self.show_instruct2)
 
     def show_instruct2(self):
         """Display the introduction screen."""
@@ -497,7 +498,7 @@ class StorylineApp:
     def show_fact8(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact8)
         self.play_sound("sounds/Villager_accept3.ogg")
-        self.button_mode = True
+        self.button_mode = False
         self.canvas.after(2000, self.storyline_step) #Level 2 last fact shown
     
     def show_retry(self):
@@ -510,7 +511,7 @@ class StorylineApp:
     def show_thankyou1(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.thankyou1)
         self.play_sound1("sounds/Villager_accept2.ogg")
-        self.button_mode = True
+        self.button_mode = False
         self.pause_timer()
         self.canvas.delete(self.time_text)
         self.root.after(3000, self.storyline_step)
@@ -528,7 +529,7 @@ class StorylineApp:
     def show_endstory1(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.endstory1)
         self.play_sound1("sounds/Villager_accept3.ogg")
-        self.button_mode = True
+        self.button_mode = False
         self.root.after(3000, self.storyline_step)
 
     def show_endstory2(self):
