@@ -76,6 +76,9 @@ class StorylineApp:
         self.fact7 = ImageTk.PhotoImage(Image.open("images/41.jpg").resize((1920, 1080)))
         self.fact8 = ImageTk.PhotoImage(Image.open("images/42.jpg").resize((1920, 1080)))
         self.kelp6 = ImageTk.PhotoImage(Image.open("images/44.jpg").resize((1920, 1080)))
+        self.endstory1 = ImageTk.PhotoImage(Image.open("images/endstory1.jpg").resize((1920, 1080)))
+        self.endstory2 = ImageTk.PhotoImage(Image.open("images/endstory2.jpg").resize((1920, 1080)))
+        self.endstory3 = ImageTk.PhotoImage(Image.open("images/endstory3.jpg").resize((1920, 1080)))
 
         #change display of computer to fit 1920x1080 -> display scale to 100%
 
@@ -106,6 +109,7 @@ class StorylineApp:
             self.show_fact2,
             self.show_kelp3,
             self.show_fact3,
+            self.show_button,
             self.show_thankyou1,
             self.show_level2,
             self.show_story7,
@@ -124,12 +128,16 @@ class StorylineApp:
             self.show_fact7,
             self.show_kelp5,
             self.show_fact8,
-            self.show_thankyou2
+            self.show_button,
+            self.show_thankyou2,
+            self.show_endstory1,
+            self.show_endstory2,
+            self.show_endstory3
         ]
 
         #Storyline setup. Start the storyline with the first step.
         self.storyline_step()
-        self.send_command("ON")
+        self.send_command("ON") #Orange
         self.play_sound("sounds/backgroundmusic2.mp3")
 
         # Start the serial reading thread
@@ -156,10 +164,15 @@ class StorylineApp:
             pass  # End of frames
         return frames
 
-    def play_sound(self, file_path):
+    def play_sound(self, file_path): #Channel 0
         """Play sound using pygame."""
         pygame.mixer.music.load(file_path)
-        pygame.mixer.music.play()
+        pygame.mixer.Channel(0).play(pygame.mixer.Sound(file_path))
+
+    def play_sound1(self, file_path): #Channel 1
+        """Play sound using pygame."""
+        pygame.mixer.music.load(file_path)
+        pygame.mixer.Channel(1).play(pygame.mixer.Sound(file_path))
 
     def show_homescreen(self):
         """Display the homescreen."""
@@ -311,12 +324,15 @@ class StorylineApp:
         self.canvas.itemconfig(self.image_on_canvas, image=self.level1)
         self.play_sound("sounds/villager_idle1.ogg")
         self.button_mode = True
+        self.root.after(2000, self.storyline_step)
+        self.send_command("OFF")
 
     def show_level2(self):
         """Display kelp image 3."""
         self.canvas.itemconfig(self.image_on_canvas, image=self.level2)
         self.play_sound("sounds/villager_idle2.ogg")
         self.button_mode = True
+        self.root.after(3000, self.storyline_step)
 
     def show_level1fail(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.level1fail)
@@ -385,6 +401,7 @@ class StorylineApp:
         self.canvas.itemconfig(self.image_on_canvas, image=self.story7)
         self.play_sound("sounds/Villager_idle1.ogg")
         self.button_mode = True
+        self.send_command("ON")
 
     def show_story8(self):
         """Display the introduction screen."""
@@ -409,6 +426,7 @@ class StorylineApp:
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct1)
         self.play_sound("sounds/Villager_trade3.ogg")
         self.button_mode = True
+        self.send_command("ON")
 
     def show_instruct2(self):
         """Display the introduction screen."""
@@ -417,8 +435,9 @@ class StorylineApp:
         self.time_text = self.canvas.create_text(960, 960, text=f"Time Left: {self.time_left}s", font=("Comic Sans", 50), fill="magenta")
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct2)
         self.play_sound("sounds/Villager_trade3.ogg")
+        self.play_sound1("sounds/concrete_halls.mp3")
         self.button_mode = False
-##        self.send_command("OFF")
+        self.send_command("OFF") #uncommented?
         self.timer() #initialize timer 
     
     def show_instruct3(self):
@@ -434,8 +453,9 @@ class StorylineApp:
         self.time_text = self.canvas.create_text(960, 960, text=f"Time Left: {self.time_left}s", font=("Comic Sans", 50), fill="magenta")
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct4)
         self.play_sound("sounds/Villager_trade3.ogg")
+        self.play_sound1("sounds/stranger_things.mp3")
         self.button_mode = False
-      ##  self.send_command("OFF")
+        self.send_command("OFF") #uncommented?
         self.timer() #initialize timer 
 
     def show_fact1(self):
@@ -452,7 +472,7 @@ class StorylineApp:
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact3)
         self.play_sound("sounds/Villager_accept3.ogg")
         self.button_mode = False
-        self.canvas.after(2000, self.show_button) #Level 1 Last fact shown 
+        self.canvas.after(2000, self.storyline_step) #Level 1 Last fact shown 
 
     def show_fact4(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact4)
@@ -478,7 +498,7 @@ class StorylineApp:
         self.canvas.itemconfig(self.image_on_canvas, image=self.fact8)
         self.play_sound("sounds/Villager_accept3.ogg")
         self.button_mode = True
-        self.canvas.after(2000, self.show_button) #Level 2 last fact shown
+        self.canvas.after(2000, self.storyline_step) #Level 2 last fact shown
     
     def show_retry(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.retryscreen)
@@ -489,19 +509,40 @@ class StorylineApp:
 
     def show_thankyou1(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.thankyou1)
-        self.play_sound("sounds/Villager_accept2.ogg")
+        self.play_sound1("sounds/Villager_accept2.ogg")
         self.button_mode = True
         self.pause_timer()
         self.canvas.delete(self.time_text)
+        self.root.after(3000, self.storyline_step)
+        self.send_command("OFF")
 
     def show_thankyou2(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.thankyou2)
-        self.play_sound("sounds/Villager_accept2.ogg")
+        self.play_sound1("sounds/Villager_accept2.ogg")
         self.button_mode = False
         self.pause_timer()
         self.canvas.delete(self.time_text)
-        self.root.after(3000, self.show_retry)
-        print(self.current_step) 
+        self.send_command("OFF")
+        self.root.after(2000, self.storyline_step)
+
+    def show_endstory1(self):
+        self.canvas.itemconfig(self.image_on_canvas, image=self.endstory1)
+        self.play_sound1("sounds/Villager_accept3.ogg")
+        self.button_mode = True
+        self.root.after(3000, self.storyline_step)
+
+    def show_endstory2(self):
+        self.canvas.itemconfig(self.image_on_canvas, image=self.endstory2)
+        self.play_sound1("sounds/Villager_accept2.ogg")
+        self.button_mode = False
+        self.root.after(4000,self.storyline_step)
+
+    def show_endstory3(self):
+        self.canvas.itemconfig(self.image_on_canvas, image=self.endstory3)
+        self.play_sound1("sounds/Villager_accept3.ogg")
+        self.button_mode = False
+        self.root.after(4000, self.show_retry)
+        #print(self.current_step) 
 
     def show_button(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.button_screen)
@@ -518,9 +559,9 @@ class StorylineApp:
         self.time_left = 0  # Initialize timer
         self.pause_timer()
         self.storyline_step()
-        self.play_sound("sounds/Subwoofer_lullaby.mp3")
+        self.play_sound("sounds/backgroundmusic2.mp3")
 
-
+ 
 
 
 # Start the application

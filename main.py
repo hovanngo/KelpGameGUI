@@ -129,6 +129,7 @@ class StorylineApp:
 
         #Storyline setup. Start the storyline with the first step.
         self.storyline_step()
+        self.send_command("ON")
         self.play_sound("sounds/backgroundmusic2.mp3")
 
         # Start the serial reading thread
@@ -257,8 +258,13 @@ class StorylineApp:
         print("Manual skip")
         self.storyline_step()
         
-
-
+    def send_command(self, command):
+        """Send a command to the Arduino."""
+        if self.ser.is_open:  # Check if the serial port is open
+            self.ser.write(f"{command}\n".encode())
+            print(f"Command sent: {command}")
+        else:
+            print("Serial port not open. Cannot send command.")
 
 #################################################
 # Storyline functions 
@@ -407,11 +413,12 @@ class StorylineApp:
     def show_instruct2(self):
         """Display the introduction screen."""
         self.resume_timer()
-        self.time_left = 10 #time set to 60
+        self.time_left = 60 #time set to 60
         self.time_text = self.canvas.create_text(960, 960, text=f"Time Left: {self.time_left}s", font=("Comic Sans", 50), fill="magenta")
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct2)
         self.play_sound("sounds/Villager_trade3.ogg")
         self.button_mode = False
+##        self.send_command("OFF")
         self.timer() #initialize timer 
     
     def show_instruct3(self):
@@ -423,11 +430,12 @@ class StorylineApp:
     def show_instruct4(self):
         """Display the introduction screen."""
         self.resume_timer()
-        self.time_left = 10 #time set to 90
+        self.time_left = 90 #time set to 90
         self.time_text = self.canvas.create_text(960, 960, text=f"Time Left: {self.time_left}s", font=("Comic Sans", 50), fill="magenta")
         self.canvas.itemconfig(self.image_on_canvas, image=self.instruct4)
         self.play_sound("sounds/Villager_trade3.ogg")
         self.button_mode = False
+      ##  self.send_command("OFF")
         self.timer() #initialize timer 
 
     def show_fact1(self):
@@ -477,6 +485,7 @@ class StorylineApp:
         self.play_sound("sounds/Villager_idle1.ogg")
         self.button_mode = True
         self.retry_status = True
+        self.send_command("ON")
 
     def show_thankyou1(self):
         self.canvas.itemconfig(self.image_on_canvas, image=self.thankyou1)
@@ -498,6 +507,7 @@ class StorylineApp:
         self.canvas.itemconfig(self.image_on_canvas, image=self.button_screen)
         self.play_sound("sounds/Villager_idle1.ogg")
         self.button_mode = True
+        self.send_command("ON")
 
     def retry(self):
         self.retry_status = False #turn retry status back off once retried 
@@ -508,10 +518,13 @@ class StorylineApp:
         self.time_left = 0  # Initialize timer
         self.pause_timer()
         self.storyline_step()
-        self.play_sound("sounds/Subwoofer_lullaby.mp3")
+        self.play_sound("sounds/backgroundmusic2.mp3")
+
 
 
 # Start the application
 if __name__ == "__main__":
-    StorylineApp()
+    app = StorylineApp()
+
+
 
